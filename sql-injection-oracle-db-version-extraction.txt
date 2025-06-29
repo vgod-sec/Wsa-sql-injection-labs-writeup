@@ -1,0 +1,52 @@
+Lab Title: SQL Injection Attack – Extracting Database Type and Version on Oracle
+
+Overview:
+This lab demonstrates how to identify and exploit a SQL injection vulnerability in a web application using an Oracle database backend. By leveraging a UNION-based SQL injection technique, the attacker can enumerate the number of columns and retrieve sensitive database metadata—specifically, the version string.
+
+Objective:
+Exploit a vulnerable `category` parameter to perform a UNION-based SQL injection and extract the Oracle database version.
+
+Tools and Resources:
+- Web browser
+- Burp Suite (or any HTTP proxy/interceptor)
+
+Procedure:
+
+1. Intercept the HTTP Request:
+   Begin by navigating to the product category page and capturing the request using Burp Suite. The vulnerable request will resemble:
+   GET /filter?category=Gifts HTTP/1.1
+   Host: <lab-id>.web-security-academy.net
+
+2. Determine the Number of Columns and Data Types:
+   To construct a valid UNION SELECT statement, the injected query must match the number of columns and their data types returned by the original query. Begin testing with the following payload:
+   ' UNION SELECT 'abc', 'def' FROM dual--
+   - If the strings "abc" and "def" are reflected on the page, it confirms that:
+     • The original query returns two columns.
+     • Both columns are capable of displaying text data.
+   - Note: `dual` is a special one-row, one-column table in Oracle used for selecting constant values.
+
+3. Extract the Oracle Database Version:
+   Once the structure is known, use the following payload to extract the database version:
+   ' UNION SELECT BANNER, NULL FROM v$version--
+   - `v$version` is an Oracle system view containing version and build information.
+   - `BANNER` is the column that holds the database version string.
+   - `NULL` is used to satisfy the second column requirement.
+
+4. Encode the Payload for Use in the URL:
+   For direct browser-based injection, URL-encode the payload:
+   %27%20UNION%20SELECT%20BANNER,%20NULL%20FROM%20v$version--
+   Resulting in a full request like:
+   https://<lab-id>.web-security-academy.net/filter?category=%27%20UNION%20SELECT%20BANNER,%20NULL%20FROM%20v$version--
+
+5. Validate the Output:
+   If the injection is successful, the application will display output similar to:
+   Oracle Database 19c Enterprise Edition Release 19.0.0.0.0
+   This confirms successful execution of the UNION injection and leakage of backend metadata.
+
+Conclusion:
+This exercise illustrates the risks associated with SQL injection vulnerabilities, especially when interacting with database metadata. The ability to extract system information from views like `v$version` can be leveraged for deeper exploitation. It emphasizes the importance of:
+- Validating and sanitizing user input,
+- Using parameterized queries or stored procedures,
+- Disabling detailed error messages in production environments.
+
+Mitigation techniques such as prepared statements and ORM frameworks should be standard practice in modern application development to prevent SQL injection vulnerabilities.
